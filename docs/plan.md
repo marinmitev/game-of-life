@@ -99,11 +99,14 @@ pom.xml, mvnw, mvnw.cmd, .mvn/wrapper/
 README.md                      run instructions, protocol, design notes, AI work process (req. 5)
 docs/plan.md                   this document
 docs/tasks.md                  the task checklist, and what changed while building
+docs/web-client-plan.md        the browser client added afterwards, and its checklist
 patterns/gosper-glider-gun.cells
 src/main/java/life/Main.java
 src/main/java/life/core/{Cell,Universe,PatternFile,PatternFormatException}.java
-src/main/java/life/net/{Message,Wire,Game,GameServer,GameClient,ProtocolException}.java
+src/main/java/life/net/{Message,Wire,Game,GameHub,GameServer,GameClient,ProtocolException}.java
 src/main/java/life/ui/{Viewport,Glyphs,Renderer,Console}.java
+src/main/java/life/web/WebServer.java
+src/main/resources/web/{index.html,app.js,style.css}
 src/test/java/life/...
 ```
 

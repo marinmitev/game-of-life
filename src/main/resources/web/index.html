@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game of Life</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="toolbar">
+  <button id="run" title="space">Run</button>
+  <button id="step" title="n">Step</button>
+  <button id="clear" title="c">Clear</button>
+
+  <span class="group">
+    <button id="slower" title="-">&minus;</button>
+    <span id="speed" class="readout">100 ms</span>
+    <button id="faster" title="+">+</button>
+  </span>
+
+  <span class="group">
+    <button id="out" title="mouse wheel">&minus;</button>
+    <span id="zoom" class="readout">8 px</span>
+    <button id="in" title="mouse wheel">+</button>
+  </span>
+
+  <span class="group">
+    <button id="save" title="s">Save</button>
+    <button id="load" title="l">Load</button>
+    <button id="patterns">Patterns</button>
+  </span>
+
+  <span class="group">
+    <button id="goto" title="g">Go to</button>
+    <button id="home" title="0">Origin</button>
+  </span>
+
+  <span id="message" class="message"></span>
+</header>
+
+<canvas id="universe"></canvas>
+
+<footer class="status">
+  <span id="status"></span>
+  <span id="connection" class="connecting">connecting</span>
+</footer>
+
+<p class="help">
+  click or drag to draw &middot; right-drag to pan &middot; wheel to zoom &middot;
+  arrows pan &middot; space run/pause &middot; n step &middot; c clear &middot; +/&minus; speed &middot;
+  g go to &middot; s save &middot; l load
+</p>
+
+<script src="app.js"></script>
+</body>
+</html>

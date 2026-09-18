@@ -1,8 +1,9 @@
 # Multiplayer Conway's Game of Life
 
-One server owns a 2<sup>64</sup> x 2<sup>64</sup> toroidal universe; any number of console clients
-connect over TCP to watch it and edit it together. Everything is plain Java 25 plus
-[JLine](https://github.com/jline/jline3) for the terminal and JUnit 5 for the tests.
+One server owns a 2<sup>64</sup> x 2<sup>64</sup> toroidal universe; any number of clients watch it
+and edit it together, in a terminal over TCP or in a browser on an HTML canvas. Everything is plain
+Java 25 plus [JLine](https://github.com/jline/jline3) for the terminal and JUnit 5 for the tests;
+the browser client has no dependencies at all.
 
 ```
    █ █    ██
@@ -19,19 +20,43 @@ installing.
 ./mvnw clean verify          # compile, run the tests, build target/life.jar
 ```
 
-Start a server, then one or more clients (each in its own terminal window):
+Start a server, then open as many clients as you like:
 
 ```bash
-java -jar target/life.jar server                              # port 7777
+java -jar target/life.jar server                              # TCP 7777, browser on 8080
 java -jar target/life.jar server 7777 gosper-glider-gun       # ... preloaded with the example
+java -jar target/life.jar server --web 9000                   # ... browser on another port
+java -jar target/life.jar server --no-web                     # ... terminal clients only
 java -jar target/life.jar client                              # connect to localhost:7777
 java -jar target/life.jar client 192.168.1.10:7777            # connect to another machine
 java -jar target/life.jar client --ascii                      # draw cells as '#' instead of a block
 ```
 
-A one-minute tour: start the server, connect two clients, press `l` in either one and type
-`gosper-glider-gun`, then press `Enter`. Both windows now show the same gun firing gliders, and
-either window can pause it, edit cells or change the speed.
+A one-minute tour: start the server, open <http://localhost:8080> and connect a terminal client
+too. Press `l` in the terminal and type `gosper-glider-gun`. The browser shows the same gun
+appear, and either window can now pause it, draw cells or change the speed.
+
+## Browser client
+
+`http://localhost:8080` serves a canvas on the same universe as the TCP port. Click or drag to
+draw, right-drag to pan, the wheel zooms, and the toolbar and keys mirror the terminal client
+(`space` run/pause, `n` step, `c` clear, `+`/`-` speed, `g` go to, `s`/`l` save and load). Because
+the coordinates go past 2<sup>53</sup>, where JavaScript numbers stop being exact, the client uses
+`BigInt` throughout and wraps with the same unsigned comparison the server uses; opening the page
+as `#selftest` runs those checks in the browser and reports in the toolbar.
+
+A browser cannot open a raw socket, so the same line protocol is carried over HTTP rather than
+replaced:
+
+| Route | Purpose |
+| --- | --- |
+| `GET /events` | Server-Sent Events; each message is one `data:` line of the protocol below |
+| `POST /command` | one protocol line as the body; `204` when the change was broadcast |
+| `GET /`, `/app.js`, `/style.css` | the client, served from inside the jar |
+
+Server-Sent Events fit the traffic — a stream outwards, the occasional keystroke inwards — and
+need no framing code and nothing beyond `com.sun.net.httpserver` in the JDK. WebSocket would have
+meant hand-writing RFC 6455 or adding an embedded servlet container.
 
 ## Keys
 
@@ -136,9 +161,16 @@ rules are testable without a server, a socket or a clock.
 `synchronized`, so the tick thread and the client threads cannot interleave. Each command produces
 exactly one reply: a `state` that everyone gets, or a `notice`/`error` that only the sender gets.
 
-**Slow clients are dropped, not tolerated.** Each connection has its own reader and writer virtual
-thread and a 64-line outbound queue. A client that stops reading fills its queue and is
-disconnected, which keeps one stalled terminal from slowing the simulation or the other players.
+**Two front ends, one hub.** `GameHub` owns the game, the clock and the list of watchers; a front
+end reduces its transport to `submit` for a command and `subscribe` for a stream of updates.
+`GameServer` is that for TCP and `WebServer` is that for HTTP, which is why a browser tab and a
+terminal are genuinely in the same game rather than two systems kept in step. It also means the
+fan-out and the slow-client policy are written once.
+
+**Slow clients are dropped, not tolerated.** Each subscriber has its own writer virtual thread and
+a 64-line outbound queue. A client that stops reading fills its queue and is disconnected, which
+keeps one stalled terminal or one backgrounded tab from slowing the simulation or the other
+players.
 
 **One character per cell.** A live cell is a solid block `█` and a dead one a space. The client
 opens its terminal as UTF-8 so the block is written correctly whatever the platform's default
@@ -151,10 +183,14 @@ per character keeps what you see and what you edit the same thing, and the view 
 the cursor reaches an edge. Rendering is a pure function from state to strings, which is why it can
 be tested without a terminal.
 
-**Known limit.** Every generation broadcasts the whole live set. For the patterns this program is
+**Known limits.** Every generation broadcasts the whole live set. For the patterns this program is
 built for (hundreds to thousands of cells) that is a few kilobytes per tick and keeps both ends
 stateless. A universe with millions of live cells would need either deltas or per-client viewport
 subscriptions; that is a deliberate trade, not an oversight.
+
+There is no authentication and no TLS on either port: anyone who can reach the machine can edit
+the universe and save patterns. That is the right shape for the game this is — players are meant
+to interfere with each other — but it means both ports belong on a trusted network.
 
 ## Layout
 
@@ -169,13 +205,17 @@ src/main/java/life/
     Message.java         sealed hierarchy of everything on the wire
     Wire.java            text codec, one exhaustive switch each way
     Game.java            the single shared mutable state
-    GameServer.java      accept loop, per-client sessions, tick schedule
+    GameHub.java         the game, the tick schedule and the fan-out, transport-free
+    GameServer.java      TCP front end: accept loop and per-client sessions
     GameClient.java      client connection and listener
   ui/
     Viewport.java        which part of the torus is on screen
     Glyphs.java          the characters a cell is drawn with
     Renderer.java        state to lines of text, pure
     Console.java         JLine terminal, key bindings, repaint loop
+  web/
+    WebServer.java       HTTP front end: SSE stream, posted commands, the page
+src/main/resources/web/  the browser client: index.html, app.js, style.css
 ```
 
 `docs/plan.md` and `docs/tasks.md` record the design and the checklist the implementation followed.
@@ -186,7 +226,7 @@ src/main/java/life/
 ./mvnw test
 ```
 
-134 tests, no mocks. The ones worth knowing about:
+151 tests, no mocks. The ones worth knowing about:
 
 - `TorusTest` runs a blinker and a glider across the seam between `Long.MAX_VALUE` and
   `Long.MIN_VALUE`, on both axes at once, and asserts they behave exactly as they do in the middle
@@ -201,6 +241,11 @@ src/main/java/life/
   an edit by one is seen by the other, a step advances both, a failed command reaches only the
   client that sent it, a departing client does not disturb the rest, and a raw socket sees the
   documented plain text.
+- `GameHubTest` covers the fan-out on its own, including a subscriber whose sink never returns:
+  it is dropped once its queue fills, while a healthy subscriber alongside it keeps receiving.
+- `WebServerTest` drives the browser front end over real HTTP, and ends with the test the whole
+  design is for — a terminal client and an event stream on one hub, where an edit made in either
+  arrives in the other.
 
 ## Using AI agents for this task
 

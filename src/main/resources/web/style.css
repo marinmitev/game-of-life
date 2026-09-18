@@ -1,0 +1,113 @@
+:root {
+    --background: #11141a;
+    --panel: #1b1f27;
+    --edge: #2c323d;
+    --text: #d6dae1;
+    --dim: #8a93a1;
+    --cell: #7fd1a6;
+    --accent: #6aa9ff;
+    --bad: #ff8b7b;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    background: var(--background);
+    color: var(--text);
+    font: 13px/1.4 ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.toolbar, .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--edge);
+}
+
+.status {
+    border-bottom: none;
+    border-top: 1px solid var(--edge);
+    justify-content: space-between;
+    color: var(--dim);
+}
+
+.group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-left: 8px;
+    border-left: 1px solid var(--edge);
+}
+
+button {
+    min-width: 30px;
+    padding: 4px 9px;
+    background: #252b35;
+    color: var(--text);
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    font: inherit;
+    cursor: pointer;
+}
+
+button:hover {
+    border-color: var(--accent);
+}
+
+button:active {
+    background: #2f3644;
+}
+
+.readout {
+    min-width: 62px;
+    text-align: center;
+    color: var(--dim);
+}
+
+.message {
+    margin-left: auto;
+    color: var(--accent);
+}
+
+.message.bad {
+    color: var(--bad);
+}
+
+#universe {
+    flex: 1;
+    display: block;
+    width: 100%;
+    min-height: 0;
+    cursor: crosshair;
+}
+
+.connecting {
+    color: var(--dim);
+}
+
+.connected {
+    color: var(--cell);
+}
+
+.lost {
+    color: var(--bad);
+}
+
+.help {
+    margin: 0;
+    padding: 5px 10px 8px;
+    background: var(--panel);
+    color: var(--dim);
+    font-size: 12px;
+}

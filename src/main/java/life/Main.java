@@ -9,9 +9,11 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
+import life.net.GameHub;
 import life.net.GameServer;
 import life.net.Message;
 import life.ui.Console;
+import life.web.WebServer;
 
 /**
  * Entry point for both halves of the program: one server hosts the universe, any number of console
@@ -29,19 +31,22 @@ public final class Main {
     private static final String USAGE = """
             Conway's Game of Life, multiplayer.
 
-              java -jar life.jar server [port] [pattern]        host a universe (default port %d)
-              java -jar life.jar client [host[:port]] [--ascii] connect a console client
+              java -jar life.jar server [port] [pattern] [--web <port>] [--no-web]
+                  Hosts one universe for terminal clients on port %d and for browsers on
+                  http://localhost:%d. Both see the same game.
 
-            Live cells are drawn as a solid block. Use --ascii to draw them as '#' instead, for
-            terminals that cannot show it.
+              java -jar life.jar client [host[:port]] [--ascii]
+                  Connects a console client. Live cells are drawn as a solid block; --ascii draws
+                  them as '#' for terminals that cannot show it.
 
             Examples
               java -jar life.jar server
               java -jar life.jar server 7777 gosper-glider-gun
+              java -jar life.jar server --web 9000 --no-web
               java -jar life.jar client
               java -jar life.jar client 192.168.1.10:7777
               java -jar life.jar client --ascii
-            """.formatted(GameServer.DEFAULT_PORT);
+            """.formatted(GameServer.DEFAULT_PORT, WebServer.DEFAULT_PORT);
 
     private Main() {
     }
@@ -59,20 +64,38 @@ public final class Main {
     }
 
     private static void server(String[] args) throws IOException, InterruptedException {
-        int port = args.length > 1 ? port(args[1]) : GameServer.DEFAULT_PORT;
+        int port = GameServer.DEFAULT_PORT;
+        int webPort = WebServer.DEFAULT_PORT;
+        String pattern = null;
+        for (int i = 1; i < args.length; i++) {
+            if (args[i].equals("--web")) {
+                webPort = port(argumentAfter(args, i++, "--web"));
+            } else if (args[i].equals("--no-web")) {
+                webPort = -1;
+            } else if (args[i].chars().allMatch(Character::isDigit)) {
+                port = port(args[i]);
+            } else {
+                pattern = args[i];
+            }
+        }
         PrintStream out = new PrintStream(System.out, true, StandardCharsets.UTF_8);
 
         Files.createDirectories(PATTERNS_DIRECTORY);
-        try (GameServer server = GameServer.start(port, PATTERNS_DIRECTORY, out::println)) {
-            if (args.length > 2) {
-                Message reply = server.game().load(args[2]);
+        // One hub, so a terminal client and a browser tab share a single universe.
+        try (GameHub hub = new GameHub(PATTERNS_DIRECTORY, out::println);
+                GameServer terminals = GameServer.start(hub, port, out::println);
+                WebServer browsers = webPort < 0 ? null : WebServer.start(hub, webPort, out::println)) {
+            if (pattern != null) {
+                Message reply = hub.game().load(pattern);
                 out.println(reply instanceof Message.Error error
                         ? "could not preload a pattern: " + error.text()
-                        : "preloaded '" + args[2] + "'");
+                        : "preloaded '" + pattern + "'");
             }
-            List<String> patterns = server.game().patternNames();
+            List<String> patterns = hub.game().patternNames();
             out.println("patterns available to clients: "
                     + (patterns.isEmpty() ? "none yet" : String.join(", ", patterns)));
+            out.println("connect a terminal client with: java -jar life.jar client localhost:"
+                    + terminals.port());
             out.println("press Ctrl-C to stop");
 
             CountDownLatch stopped = new CountDownLatch(1);
@@ -80,6 +103,13 @@ public final class Main {
             stopped.await();
             out.println("shutting down");
         }
+    }
+
+    private static String argumentAfter(String[] args, int index, String option) {
+        if (index + 1 >= args.length) {
+            fail(option + " needs a port number");
+        }
+        return args[index + 1];
     }
 
     private static void client(String[] args) throws IOException {
