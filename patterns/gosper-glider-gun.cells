@@ -1,0 +1,15 @@
+!Name: Gosper glider gun
+!Author: Bill Gosper (1970)
+!The first known pattern with unbounded growth: it emits a glider every 30 generations.
+!https://conwaylife.com/wiki/Gosper_glider_gun
+!Origin: -18 -4
+!Generation: 0
+........................O
+......................O.O
+............OO......OO............OO
+...........O...O....OO............OO
+OO........O.....O...OO
+OO........O...O.OO....O.O
+..........O.....O.......O
+...........O...O
+............OO

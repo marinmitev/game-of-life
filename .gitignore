@@ -1,0 +1,13 @@
+target/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+
+# Maven wrapper downloads the jar on first run
+.mvn/wrapper/maven-wrapper.jar
