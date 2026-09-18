@@ -1,0 +1,11 @@
+!Name: Beacon
+!Author: John Conway (1970)
+!A period 2 oscillator: two diagonally touching blocks whose facing corners
+!blink off and back on, so the population alternates between 8 and 6.
+!https://conwaylife.com/wiki/Beacon
+!Origin: -2 -2
+!Generation: 0
+OO..
+OO..
+..OO
+..OO

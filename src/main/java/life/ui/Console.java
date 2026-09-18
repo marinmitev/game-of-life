@@ -3,7 +3,6 @@ package life.ui;
 import static org.jline.keymap.KeyMap.key;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +37,10 @@ import org.jline.utils.InfoCmp.Capability;
  * <p>All drawing happens on one painter thread that repaints at most every {@value #FRAME_MILLIS}
  * milliseconds, so a fast simulation cannot flood the terminal and the network thread never blocks
  * on I/O it does not own.
+ *
+ * <p>One cell is drawn as one character. A terminal window therefore shows as many rows of the
+ * universe as it has lines, and the 100 x 100 editing area is reached by moving the cursor, which
+ * scrolls the view at the edges.
  */
 public final class Console implements GameClient.Listener, AutoCloseable {
 
@@ -85,24 +88,34 @@ public final class Console implements GameClient.Listener, AutoCloseable {
     private volatile boolean dirty = true;
     private volatile boolean quit;
 
-    private Console(Terminal terminal, String connection) {
+    private Console(Terminal terminal, String connection, boolean preferAscii) {
         this.terminal = terminal;
         this.connection = connection;
         this.originalAttributes = terminal.enterRawMode();
         this.display = new Display(terminal, true);
         this.keyReader = new BindingReader(terminal.reader());
         this.keys = keyMap(terminal);
-        this.glyphs = glyphsFor(terminal);
+        this.glyphs = glyphsFor(terminal.getType(), preferAscii);
 
         terminal.puts(Capability.enter_ca_mode);
         terminal.puts(Capability.keypad_xmit);
         terminal.flush();
     }
 
-    /** Connects to {@code host:port} and runs until the user quits or the server goes away. */
-    public static void run(String host, int port) throws IOException {
-        try (Terminal terminal = TerminalBuilder.builder().system(true).nativeSignals(true).build();
-                Console console = new Console(terminal, host + ":" + port)) {
+    /**
+     * Connects to {@code host:port} and runs until the user quits or the server goes away.
+     *
+     * <p>The terminal is opened as UTF-8 so that the solid block can be written even where the
+     * platform's default encoding is something older. Pass {@code preferAscii} for the rare
+     * terminal that cannot show it.
+     */
+    public static void run(String host, int port, boolean preferAscii) throws IOException {
+        try (Terminal terminal = TerminalBuilder.builder()
+                        .system(true)
+                        .nativeSignals(true)
+                        .encoding(StandardCharsets.UTF_8)
+                        .build();
+                Console console = new Console(terminal, host + ":" + port, preferAscii)) {
             console.client = GameClient.connect(host, port, console);
             console.show("connected to " + host + ":" + port);
             console.painter.scheduleAtFixedRate(
@@ -296,15 +309,15 @@ public final class Console implements GameClient.Listener, AutoCloseable {
         int gridLines = lines - STATUS_LINES;
 
         Viewport view = viewport;
-        if (view.columns() != columns || view.rows() != gridLines * 2) {
-            view = Viewport.centredOn(cursor.x(), cursor.y(), columns, gridLines * 2);
+        if (view.columns() != columns || view.rows() != gridLines) {
+            view = Viewport.centredOn(cursor.x(), cursor.y(), columns, gridLines);
             viewport = view;
         }
 
         Message.State current = state;
         Cell at = cursor;
         List<String> grid = Renderer.grid(current.alive(), view, glyphs);
-        int cursorLine = view.contains(at) ? Renderer.lineOf(view, at) : -1;
+        int cursorLine = view.contains(at) ? view.rowOf(at) : -1;
         int cursorColumn = view.contains(at) ? view.columnOf(at) : 0;
 
         List<AttributedString> screen = new ArrayList<>(lines);
@@ -343,18 +356,17 @@ public final class Console implements GameClient.Listener, AutoCloseable {
         return text.length() <= columns ? text : text.substring(0, columns);
     }
 
-    private static Glyphs glyphsFor(Terminal terminal) {
-        return glyphsFor(terminal.getType(), terminal.encoding());
-    }
-
     /**
-     * Half-block characters need a UTF-8 capable terminal; anything else gets the ASCII
-     * approximations so the client stays usable instead of drawing mojibake.
+     * The solid block unless the user asked for ASCII or the terminal is too limited to redraw a
+     * screen at all, in which case drawing mojibake would only make things worse.
+     *
+     * <p>The terminal's own reported encoding is deliberately not consulted: on Windows it is
+     * often the legacy code page even though the console renders Unicode perfectly well, and
+     * {@link #run} writes UTF-8 regardless.
      */
-    static Glyphs glyphsFor(String terminalType, Charset encoding) {
+    static Glyphs glyphsFor(String terminalType, boolean preferAscii) {
         boolean dumb = terminalType == null || terminalType.startsWith(Terminal.TYPE_DUMB);
-        boolean utf8 = StandardCharsets.UTF_8.equals(encoding);
-        return !dumb && utf8 ? Glyphs.BLOCKS : Glyphs.ASCII;
+        return preferAscii || dumb ? Glyphs.ASCII : Glyphs.BLOCKS;
     }
 
     private static KeyMap<Action> keyMap(Terminal terminal) {

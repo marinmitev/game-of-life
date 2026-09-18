@@ -1,6 +1,7 @@
 package life.ui;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import life.core.Cell;
@@ -22,37 +23,23 @@ public final class Renderer {
     private Renderer() {
     }
 
-    /**
-     * The grid as one string per terminal line. Two cell rows share a line, so the result has
-     * {@code ceil(viewport.rows() / 2)} entries.
-     */
+    /** The grid as one string per row of the viewport, one character per cell. */
     public static List<String> grid(Set<Cell> alive, Viewport viewport, Glyphs glyphs) {
-        int columns = viewport.columns();
-        int rows = viewport.rows();
-
-        boolean[][] live = new boolean[rows][columns];
+        char[][] canvas = new char[viewport.rows()][viewport.columns()];
+        for (char[] row : canvas) {
+            Arrays.fill(row, glyphs.of(false));
+        }
         for (Cell cell : alive) {
             if (viewport.contains(cell)) {
-                live[viewport.rowOf(cell)][viewport.columnOf(cell)] = true;
+                canvas[viewport.rowOf(cell)][viewport.columnOf(cell)] = glyphs.of(true);
             }
         }
 
-        List<String> lines = new ArrayList<>((rows + 1) / 2);
-        for (int row = 0; row < rows; row += 2) {
-            boolean[] upper = live[row];
-            boolean[] lower = row + 1 < rows ? live[row + 1] : new boolean[columns];
-            char[] line = new char[columns];
-            for (int column = 0; column < columns; column++) {
-                line[column] = glyphs.of(upper[column], lower[column]);
-            }
-            lines.add(new String(line));
+        List<String> lines = new ArrayList<>(canvas.length);
+        for (char[] row : canvas) {
+            lines.add(new String(row));
         }
         return lines;
-    }
-
-    /** The screen line of the character that shows {@code cell}. */
-    public static int lineOf(Viewport viewport, Cell cell) {
-        return viewport.rowOf(cell) / 2;
     }
 
     /** The one-line summary of the game and the cursor. */

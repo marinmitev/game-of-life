@@ -1,37 +1,29 @@
 package life.ui;
 
 /**
- * The characters used to draw cells.
+ * The characters used to draw cells: one character per cell, so what is on screen is a direct
+ * picture of the universe.
  *
- * <p>Each character carries two vertically adjacent cells, which doubles the number of rows that
- * fit on screen: a 100 x 100 universe needs 100 columns and only 50 terminal lines. {@link #ASCII}
- * is the fallback for terminals that cannot show the box-drawing characters.
+ * <p>{@link #ASCII} is the fallback for terminals that cannot show the block character.
  */
 public enum Glyphs {
 
-    /** Half-block characters; requires a UTF-8 terminal. */
-    BLOCKS('\u2588', '\u2580', '\u2584', ' '),
+    /** A solid block; requires a UTF-8 terminal. */
+    BLOCKS('\u2588'),
 
-    /** Plain ASCII approximations of the same four states. */
-    ASCII('#', '"', '_', ' ');
+    /** Plain ASCII, for terminals that cannot show the block. */
+    ASCII('#');
 
-    private final char both;
-    private final char upper;
-    private final char lower;
-    private final char neither;
+    private static final char DEAD = ' ';
 
-    Glyphs(char both, char upper, char lower, char neither) {
-        this.both = both;
-        this.upper = upper;
-        this.lower = lower;
-        this.neither = neither;
+    private final char alive;
+
+    Glyphs(char alive) {
+        this.alive = alive;
     }
 
-    /** The character showing a pair of stacked cells. */
-    public char of(boolean upperAlive, boolean lowerAlive) {
-        if (upperAlive) {
-            return lowerAlive ? both : upper;
-        }
-        return lowerAlive ? lower : neither;
+    /** The character showing one cell. */
+    public char of(boolean isAlive) {
+        return isAlive ? alive : DEAD;
     }
 }

@@ -1,0 +1,20 @@
+!Name: Pulsar
+!Author: John Conway (1970)
+!A period 3 oscillator of 48 cells, one of the most common found in a random
+!soup. Its four-fold symmetry makes the pulse easy to follow.
+!https://conwaylife.com/wiki/Pulsar
+!Origin: -6 -6
+!Generation: 0
+..OOO...OOO..
+.............
+O....O.O....O
+O....O.O....O
+O....O.O....O
+..OOO...OOO..
+.............
+..OOO...OOO..
+O....O.O....O
+O....O.O....O
+O....O.O....O
+.............
+..OOO...OOO..

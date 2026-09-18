@@ -1,0 +1,8 @@
+!Name: Blinker
+!Author: John Conway (1970)
+!The smallest and most common oscillator: three cells flipping between a
+!horizontal and a vertical bar every generation.
+!https://conwaylife.com/wiki/Blinker
+!Origin: -1 0
+!Generation: 0
+OOO

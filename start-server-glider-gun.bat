@@ -1,0 +1,1 @@
+java -jar target/life.jar server 7777 gosper-glider-gun

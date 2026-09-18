@@ -5,6 +5,7 @@ import static life.TestPatterns.advance;
 import static life.TestPatterns.cells;
 import static life.TestPatterns.universe;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -14,6 +15,8 @@ import java.util.HashSet;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class PatternFileTest {
 
@@ -135,6 +138,27 @@ class PatternFileTest {
         // Unbounded growth: exactly one more five-cell glider for every further 30 generations.
         assertEquals(46, advance(gun, 60).population(), "a second glider joins the first");
         assertEquals(71, advance(gun, 210).population(), "seven gliders after seven periods");
+    }
+
+    @ParameterizedTest(name = "{0} is a period-{2} oscillator of {1} cells")
+    @CsvSource({
+        "blinker, 3, 2",
+        "beacon, 8, 2",
+        "pulsar, 48, 3"
+    })
+    void exampleOscillatorsHaveThePeriodTheyClaim(String name, int population, int period)
+            throws IOException {
+        Universe pattern = PatternFile.load(Path.of("patterns", name + PatternFile.EXTENSION));
+
+        assertEquals(population, pattern.population());
+        for (int generation = 1; generation < period; generation++) {
+            assertNotEquals(
+                    pattern.alive(),
+                    advance(pattern, generation).alive(),
+                    name + " repeated early, at generation " + generation);
+        }
+        assertEquals(pattern.alive(), advance(pattern, period).alive());
+        assertEquals(population, advance(pattern, 10 * period).population());
     }
 
     private static void assertRoundTrips(Universe universe) {

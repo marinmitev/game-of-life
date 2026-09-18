@@ -6,7 +6,7 @@ a task was not started until the previous one's checks passed.
 
 Legend: `[x]` done · `[~]` done but needs a human at a real terminal
 
-Status: all phases complete. `./mvnw clean verify` is green with 132 tests, and
+Status: all phases complete. `./mvnw clean verify` is green with 134 tests, and
 `target/life.jar` runs a server and clients. What ended up differing from the original plan is
 recorded at the bottom.
 
@@ -75,11 +75,13 @@ recorded at the bottom.
   *Done when:* round-trip test passes for glider, glider gun, empty, and a pattern straddling
   `Long.MAX_VALUE` on both axes.
 
-- [x] **2.4 Example file `patterns/gosper-glider-gun.cells`**
-  36 cells in a 36x9 box at origin `(-18, -4)`, so it is centred on `(0, 0)`.
-  *Done when:* test loads the file, asserts population 36, and asserts the period-30 behaviour:
-  41 cells at generation 30 with the gun reappearing unchanged, 46 at 60, 71 at 210.
-  → `PatternFileTest`, 13 tests.
+- [x] **2.4 Example files in `patterns/`**
+  `gosper-glider-gun` (36 cells in a 36x9 box at origin `(-18, -4)`), plus the `blinker`,
+  `beacon` and `pulsar` oscillators. All are centred on `(0, 0)`.
+  *Done when:* test loads the gun, asserts population 36 and the period-30 behaviour (41 cells at
+  generation 30 with the gun reappearing unchanged, 46 at 60, 71 at 210); and each oscillator
+  returns to its starting cells after exactly its stated period, not sooner.
+  → `PatternFileTest`, 16 tests.
 
 ---
 
@@ -148,11 +150,11 @@ recorded at the bottom.
   → `ViewportTest`, 11 tests.
 
 - [x] **6.2 Renderer (pure, testable)**
-  `Renderer.grid(...)` returns plain glyph rows (two cell rows per line via `Glyphs`),
+  `Renderer.grid(...)` returns plain glyph rows, one character per cell via `Glyphs`;
   `Renderer.status(...)` the summary line, `Renderer.HELP` the key list. No ANSI and no terminal
   here; the cursor highlight is applied by `Console`, which keeps the renderer golden-testable.
   *Done when:* golden tests for small viewports, including one across the wrap seam.
-  → `RendererTest`, 10 tests.
+  → `RendererTest`, 9 tests.
 
 - [x] **6.3 Terminal loop**
   JLine `Terminal` in raw mode on the alternate screen, `KeyMap` bindings (arrows, `space`,
@@ -161,8 +163,10 @@ recorded at the bottom.
   every 16 ms. Terminal resize re-centres the viewport on the cursor.
 
 - [~] **6.4 Terminal verification**
-  Glyph fallback is chosen by `Console.glyphsFor(type, encoding)`: half blocks on a UTF-8
-  terminal, `# " _` on a dumb or non-UTF-8 one. → `ConsoleTest`, 3 tests.
+  The client opens its terminal with UTF-8 encoding and draws `█` by default;
+  `Console.glyphsFor(type, preferAscii)` returns `#` when `--ascii` is passed or the terminal type
+  is `dumb`. The terminal's reported encoding is not consulted, because on Windows it is the legacy
+  code page even when the console renders Unicode. → `ConsoleTest`, 3 tests.
   *Still needs a human:* looking at two real client windows side by side. JLine needs a real
   terminal, so this cannot be asserted in the build.
 
@@ -177,7 +181,7 @@ recorded at the bottom.
   the AI work process (requirement 5).
 
 - [x] **7.2 Full verification**
-  `./mvnw clean verify` green, 132 tests, shaded `target/life.jar` produced. End-to-end run of
+  `./mvnw clean verify` green, 134 tests, shaded `target/life.jar` produced. End-to-end run of
   the built jar: `server 7799 gosper-glider-gun` with two TCP clients at 50 ms per generation —
   both received the 36-cell gun on connect, both advanced in lockstep past generation 200, the
   population grew as the gun fired, and neither client was dropped.
@@ -203,6 +207,11 @@ Decisions taken during implementation that the plan did not anticipate:
 - **`Game` lives in `life.net`**, next to the server that owns it; the plan's file list omitted it.
 - **`Glyphs` extracted as an enum** so the ASCII fallback is a value rather than a branch in the
   renderer, and `Renderer` stayed free of ANSI entirely.
+- **One character per cell instead of half-blocks.** The plan packed two cell rows into each
+  terminal line (`█ ▀ ▄`) to fit 100 x 100 in 50 lines. It worked, but the cursor then covered two
+  cells and only the status line could say which one `space` would toggle. Drawing one cell per
+  character costs half the visible rows — recovered by scrolling, which the viewport already did —
+  and in exchange what you see is exactly what you edit.
 - **Extra key bindings:** `g` to jump to any coordinate (the quickest way to see the 2^64 wrap for
   yourself), `[`/`]` for horizontal paging, `0`/`Home` to return to the origin.
 - **Saving refuses spans wider than 4096 cells.** A universe is unbounded but a pattern file is a

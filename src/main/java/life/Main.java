@@ -29,14 +29,18 @@ public final class Main {
     private static final String USAGE = """
             Conway's Game of Life, multiplayer.
 
-              java -jar life.jar server [port] [pattern]   host a universe (default port %d)
-              java -jar life.jar client [host[:port]]      connect a console client
+              java -jar life.jar server [port] [pattern]        host a universe (default port %d)
+              java -jar life.jar client [host[:port]] [--ascii] connect a console client
+
+            Live cells are drawn as a solid block. Use --ascii to draw them as '#' instead, for
+            terminals that cannot show it.
 
             Examples
               java -jar life.jar server
               java -jar life.jar server 7777 gosper-glider-gun
               java -jar life.jar client
               java -jar life.jar client 192.168.1.10:7777
+              java -jar life.jar client --ascii
             """.formatted(GameServer.DEFAULT_PORT);
 
     private Main() {
@@ -81,16 +85,21 @@ public final class Main {
     private static void client(String[] args) throws IOException {
         String host = "localhost";
         int port = GameServer.DEFAULT_PORT;
-        if (args.length > 1) {
-            String target = args[1];
-            int colon = target.lastIndexOf(':');
-            host = colon < 0 ? target : target.substring(0, colon);
+        boolean preferAscii = false;
+        for (int i = 1; i < args.length; i++) {
+            String argument = args[i];
+            if (argument.equals("--ascii")) {
+                preferAscii = true;
+                continue;
+            }
+            int colon = argument.lastIndexOf(':');
+            host = colon < 0 ? argument : argument.substring(0, colon);
             if (colon >= 0) {
-                port = port(target.substring(colon + 1));
+                port = port(argument.substring(colon + 1));
             }
         }
         try {
-            Console.run(host, port);
+            Console.run(host, port, preferAscii);
         } catch (ConnectException e) {
             fail("could not connect to " + host + ":" + port + " - is the server running?");
         }

@@ -13,38 +13,30 @@ import org.junit.jupiter.api.Test;
 class RendererTest {
 
     @Test
-    void drawsTwoCellRowsPerLineWithHalfBlocks() {
-        // A 2x2 block fills the left half of the first line completely.
+    void drawsOneCharacterPerCell() {
         Set<Cell> block = TestPatterns.cells(0, 0, TestPatterns.BLOCK);
 
-        List<String> lines = Renderer.grid(block, new Viewport(0, 0, 4, 4), Glyphs.BLOCKS);
+        List<String> lines = Renderer.grid(block, new Viewport(0, 0, 4, 3), Glyphs.BLOCKS);
 
-        assertEquals(List.of("\u2588\u2588  ", "    "), lines);
+        assertEquals(List.of("\u2588\u2588  ", "\u2588\u2588  ", "    "), lines);
     }
 
     @Test
-    void drawsUpperAndLowerHalvesSeparately() {
-        Set<Cell> cells = Set.of(new Cell(0, 0), new Cell(1, 1), new Cell(2, 0), new Cell(2, 1));
+    void drawsAGliderAsItIsWrittenInAPatternFile() {
+        Set<Cell> glider = TestPatterns.cells(0, 0, TestPatterns.GLIDER);
 
-        List<String> lines = Renderer.grid(cells, new Viewport(0, 0, 4, 2), Glyphs.BLOCKS);
+        List<String> lines = Renderer.grid(glider, new Viewport(0, 0, 3, 3), Glyphs.BLOCKS);
 
-        assertEquals(List.of("\u2580\u2584\u2588 "), lines);
+        assertEquals(List.of(" \u2588 ", "  \u2588", "\u2588\u2588\u2588"), lines);
     }
 
     @Test
     void fallsBackToAsciiWithTheSameLayout() {
-        Set<Cell> cells = Set.of(new Cell(0, 0), new Cell(1, 1), new Cell(2, 0), new Cell(2, 1));
+        Set<Cell> glider = TestPatterns.cells(0, 0, TestPatterns.GLIDER);
 
-        List<String> lines = Renderer.grid(cells, new Viewport(0, 0, 4, 2), Glyphs.ASCII);
+        List<String> lines = Renderer.grid(glider, new Viewport(0, 0, 3, 3), Glyphs.ASCII);
 
-        assertEquals(List.of("\"_# "), lines);
-    }
-
-    @Test
-    void anOddNumberOfRowsLeavesTheLastLowerHalfEmpty() {
-        List<String> lines = Renderer.grid(Set.of(new Cell(0, 2)), new Viewport(0, 0, 2, 3), Glyphs.BLOCKS);
-
-        assertEquals(List.of("  ", "\u2580 "), lines);
+        assertEquals(List.of(" # ", "  #", "###"), lines);
     }
 
     @Test
@@ -53,26 +45,24 @@ class RendererTest {
 
         List<String> lines = Renderer.grid(cells, new Viewport(0, 0, 2, 2), Glyphs.BLOCKS);
 
-        assertEquals(List.of("\u2580 "), lines);
+        assertEquals(List.of("\u2588 ", "  "), lines);
     }
 
     @Test
     void drawsCellsAcrossTheWrapSeam() {
-        Set<Cell> cells = Set.of(new Cell(Long.MAX_VALUE, 0), new Cell(Long.MIN_VALUE, 0));
+        Set<Cell> cells = Set.of(new Cell(Long.MAX_VALUE, 0), new Cell(Long.MIN_VALUE, 1));
 
         List<String> lines = Renderer.grid(cells, new Viewport(Long.MAX_VALUE - 1, 0, 4, 2), Glyphs.BLOCKS);
 
-        assertEquals(List.of(" \u2580\u2580 "), lines);
+        assertEquals(List.of(" \u2588  ", "  \u2588 "), lines);
     }
 
     @Test
-    void mapsACellToItsScreenLine() {
-        Viewport viewport = new Viewport(0, 0, 10, 10);
+    void hasOneLinePerViewportRow() {
+        List<String> lines = Renderer.grid(Set.of(), new Viewport(0, 0, 7, 3), Glyphs.BLOCKS);
 
-        assertEquals(0, Renderer.lineOf(viewport, new Cell(0, 0)));
-        assertEquals(0, Renderer.lineOf(viewport, new Cell(0, 1)));
-        assertEquals(1, Renderer.lineOf(viewport, new Cell(0, 2)));
-        assertEquals(4, Renderer.lineOf(viewport, new Cell(0, 9)));
+        assertEquals(3, lines.size());
+        lines.forEach(line -> assertEquals(7, line.length()));
     }
 
     @Test

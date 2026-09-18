@@ -1,0 +1,1 @@
+java -jar target/life.jar client 

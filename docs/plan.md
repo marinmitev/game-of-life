@@ -68,10 +68,12 @@ The step-by-step task list lives in [`tasks.md`](tasks.md).
 
 ## 5. Console UI (`life.ui.Console`, JLine 3)
 
-- Full-screen terminal rendering with **half-block characters** (`▀ ▄ █`): two universe rows per
-  terminal line, so the 100×100 editing area fits in 100 columns × 50 lines. Viewport pans (with
-  the cursor, or PageUp/PageDown) if the terminal is smaller, and pans freely beyond 100×100 so
-  you can watch gliders leave the editor area.
+- Full-screen terminal rendering, **one character per cell** (`█` alive, space dead; `#` via
+  `--ascii` or on a `dumb` terminal). The terminal is opened as UTF-8 so the block survives a
+  legacy platform encoding. The viewport pans with the cursor, or by a screen with PageUp/PageDown, so the
+  100×100 editing area is reachable in any window size and you can follow gliders well beyond it.
+  (The plan originally called for half-block characters, two cell rows per line; that was dropped
+  because a cursor covering two cells is harder to reason about than a smaller visible area.)
 - Keys: arrows move cursor, `Space` toggle, `Enter` start/stop, `N` step, `C` clear,
   `+` / `-` speed, `S` save, `L` load, `Q` quit.
 - Status line shows generation, population, running/paused, speed, cursor coordinates,

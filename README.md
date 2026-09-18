@@ -5,8 +5,9 @@ connect over TCP to watch it and edit it together. Everything is plain Java 25 p
 [JLine](https://github.com/jline/jline3) for the terminal and JUnit 5 for the tests.
 
 ```
-  ▄▄▄  ▄▄     gen 431 | pop 66 | RUNNING | 100ms | cursor -3,7 dead | view -60,-27 120x54 | localhost:7777
- █  ▀▄ ▀▀     arrows move  space toggle  enter run/pause  n step  c clear  +/- speed  g goto  s save  l load  q quit
+   █ █    ██
+    ██    ██       gen 431 | pop 66 | RUNNING | 100ms | cursor -3,7 dead | view -60,-27 120x27 | localhost:7777
+    █             arrows move  space toggle  enter run/pause  n step  c clear  +/- speed  g goto  s save  l load  q quit
 ```
 
 ## Build and run
@@ -25,6 +26,7 @@ java -jar target/life.jar server                              # port 7777
 java -jar target/life.jar server 7777 gosper-glider-gun       # ... preloaded with the example
 java -jar target/life.jar client                              # connect to localhost:7777
 java -jar target/life.jar client 192.168.1.10:7777            # connect to another machine
+java -jar target/life.jar client --ascii                      # draw cells as '#' instead of a block
 ```
 
 A one-minute tour: start the server, connect two clients, press `l` in either one and type
@@ -35,7 +37,7 @@ either window can pause it, edit cells or change the speed.
 
 | Key | Action |
 | --- | --- |
-| arrows | move the cursor (the view scrolls when the cursor reaches an edge) |
+| arrows | move the cursor; the view scrolls when the cursor reaches an edge, so the 100 x 100 area is reachable in any window size |
 | `space` | bring the cell under the cursor to life, or kill it |
 | `enter` | start or pause the simulation |
 | `n` | advance exactly one generation |
@@ -72,8 +74,17 @@ OO........O...O.OO....O.O
 ```
 
 `O` (also `o` or `*`) is a live cell and `.` (also a space) a dead one; trailing dead cells may be
-omitted and `!` lines are comments. [`patterns/gosper-glider-gun.cells`](patterns/gosper-glider-gun.cells)
-is the worked example, centred on the origin so it appears in a client's default view.
+omitted and `!` lines are comments.
+
+Four examples ship with the project, each centred on the origin so it appears in a client's
+default view. Press `l` in a client and type the name:
+
+| Name | Cells | Behaviour |
+| --- | --- | --- |
+| [`gosper-glider-gun`](patterns/gosper-glider-gun.cells) | 36 | unbounded growth: a new glider every 30 generations |
+| [`blinker`](patterns/blinker.cells) | 3 | period 2 oscillator, the smallest there is |
+| [`beacon`](patterns/beacon.cells) | 8 | period 2 oscillator; the population alternates 8, 6 |
+| [`pulsar`](patterns/pulsar.cells) | 48 | period 3 oscillator with four-fold symmetry |
 
 Because `!Origin` is absolute, a pattern saved near the wrap seam reloads exactly where it was
 rather than near zero.
@@ -129,10 +140,16 @@ exactly one reply: a `state` that everyone gets, or a `notice`/`error` that only
 thread and a 64-line outbound queue. A client that stops reading fills its queue and is
 disconnected, which keeps one stalled terminal from slowing the simulation or the other players.
 
-**Two cells per character.** The renderer draws with half-block characters (`█ ▀ ▄`), so a
-100 x 100 universe needs 100 columns and only 50 terminal lines. It falls back to ASCII (`# " _`)
-on terminals that are not UTF-8 capable. Rendering is a pure function from state to strings, which
-is why it can be tested without a terminal.
+**One character per cell.** A live cell is a solid block `█` and a dead one a space. The client
+opens its terminal as UTF-8 so the block is written correctly whatever the platform's default
+encoding is — on Windows the console reports a legacy code page while rendering Unicode perfectly
+well, so trusting that report would needlessly degrade the display. `--ascii` draws `#` instead for
+a terminal that genuinely cannot manage the block, and a terminal that reports itself as `dumb`
+gets `#` automatically. Packing two cells into one character with half-blocks would
+fit twice as many rows on screen, but it makes the cursor cover two cells at once; drawing one cell
+per character keeps what you see and what you edit the same thing, and the view simply scrolls when
+the cursor reaches an edge. Rendering is a pure function from state to strings, which is why it can
+be tested without a terminal.
 
 **Known limit.** Every generation broadcasts the whole live set. For the patterns this program is
 built for (hundreds to thousands of cells) that is a few kilobytes per tick and keeps both ends
@@ -156,7 +173,7 @@ src/main/java/life/
     GameClient.java      client connection and listener
   ui/
     Viewport.java        which part of the torus is on screen
-    Glyphs.java          the four half-block characters
+    Glyphs.java          the characters a cell is drawn with
     Renderer.java        state to lines of text, pure
     Console.java         JLine terminal, key bindings, repaint loop
 ```
@@ -169,14 +186,15 @@ src/main/java/life/
 ./mvnw test
 ```
 
-132 tests, no mocks. The ones worth knowing about:
+134 tests, no mocks. The ones worth knowing about:
 
 - `TorusTest` runs a blinker and a glider across the seam between `Long.MAX_VALUE` and
   `Long.MIN_VALUE`, on both axes at once, and asserts they behave exactly as they do in the middle
   of the universe.
 - `PatternFileTest` round-trips patterns through text, including one straddling both seams, and
-  checks the example file really is the 36-cell Gosper gun that reappears unchanged with one new
-  glider after exactly 30 generations.
+  checks the example files really are what they claim: the 36-cell Gosper gun reappears unchanged
+  with one new glider after exactly 30 generations, and each shipped oscillator returns to its
+  starting cells after its stated period and not one generation sooner.
 - `WireTest` round-trips every message variant, including a 1000-cell state and extreme
   coordinates.
 - `GameServerTest` starts a real server on a real port and drives two real clients through it:
