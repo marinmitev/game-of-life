@@ -5,6 +5,10 @@ and edit it together, in a terminal over TCP or in a browser on an HTML canvas. 
 Java 25 plus [JLine](https://github.com/jline/jline3) for the terminal and JUnit 5 for the tests;
 the browser client has no dependencies at all.
 
+![The browser client 788 generations into the Gosper glider gun, with a diagonal stream of gliders leaving the gun](docs/screenshot2.png)
+
+The same universe, from a terminal client:
+
 ```
    █ █    ██
     ██    ██       gen 431 | pop 66 | RUNNING | 100ms | cursor -3,7 dead | view -60,-27 120x27 | localhost:7777
@@ -57,6 +61,8 @@ They are a Windows convenience only — everything they do is one of the `java -
 which is what to use on Linux and macOS.
 
 ## Browser client
+
+![The browser client with gosper-glider-gun just loaded, paused at generation 0 with 36 cells](docs/screenshot1.png)
 
 `http://localhost:8080` serves a canvas on the same universe as the TCP port. Click or drag to
 draw, right-drag to pan, the wheel zooms, and the toolbar and keys mirror the terminal client
