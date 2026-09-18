@@ -36,6 +36,26 @@ A one-minute tour: start the server, open <http://localhost:8080> and connect a 
 too. Press `l` in the terminal and type `gosper-glider-gun`. The browser shows the same gun
 appear, and either window can now pause it, draw cells or change the speed.
 
+### Shortcut scripts
+
+The commands worth repeating are also one-line `.bat` files next to `pom.xml`, so a demo needs no
+typing: double-click them, or run them from a terminal.
+
+| Script | What it starts |
+| --- | --- |
+| [`start-server-clean.bat`](start-server-clean.bat) | a server with an empty universe |
+| [`start-server-glider-gun.bat`](start-server-glider-gun.bat) | a server preloaded with `gosper-glider-gun` |
+| [`start-server-pulsar.bat`](start-server-pulsar.bat) | a server preloaded with `pulsar` |
+| [`start-client-utf8.bat`](start-client-utf8.bat) | a terminal client drawing cells as `█` |
+| [`start-client-ascii.bat`](start-client-ascii.bat) | a terminal client drawing cells as `#` |
+| [`start-client-web.bat`](start-client-web.bat) | the browser client at <http://localhost:8080> |
+
+All of them assume `target/life.jar` has been built and that a server is started before any
+client. The server scripts use the default ports, so `start-client-web.bat` matches them; if you
+change the ports on the command line, open the browser yourself rather than through the script.
+They are a Windows convenience only — everything they do is one of the `java -jar` lines above,
+which is what to use on Linux and macOS.
+
 ## Browser client
 
 `http://localhost:8080` serves a canvas on the same universe as the TCP port. Click or drag to
@@ -216,6 +236,7 @@ src/main/java/life/
   web/
     WebServer.java       HTTP front end: SSE stream, posted commands, the page
 src/main/resources/web/  the browser client: index.html, app.js, style.css
+start-*.bat              one-line shortcuts for the usual server and client commands
 ```
 
 `docs/plan.md` and `docs/tasks.md` record the design and the checklist the implementation followed.
